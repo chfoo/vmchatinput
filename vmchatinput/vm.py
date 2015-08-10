@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import csv
 import datetime
 import logging
@@ -11,6 +13,7 @@ import collections
 import PIL.Image
 import PIL.ImageMath
 import six
+import sys
 
 import virtualbox
 from virtualbox.library import MachineState, VBoxErrorIprtError, SessionState
@@ -426,6 +429,8 @@ class InputLogging(object):
             self._current_date = date_now
 
         self._log_writer.writerow([datetime_now.isoformat(), nick, value])
+
+        print('>', nick, value, file=sys.stderr)
 
     def _open_log_file(self):
         date_str = datetime.datetime.utcnow().date().isoformat()
