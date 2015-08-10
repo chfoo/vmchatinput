@@ -1,0 +1,7 @@
+{
+    "channel": "#twitchplayspokemon",
+    "server": "irc.twitch.tv",
+    "log_dir": "./DIRECTORY_PATH_TO_STORE_LOGS_AND_SCREENSHOTS/",
+    "virtual_machine": "THE_NAME_OF_YOUR_VIRTUAL_MACHINE_HERE",
+    "debug": false
+}
