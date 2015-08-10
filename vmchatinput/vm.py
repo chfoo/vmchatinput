@@ -204,11 +204,11 @@ class VMThread(threading.Thread):
         elif first_word.startswith('@'):
             self._send_key('ALT', down=True, up=False)
 
-            num = len(first_word) - 1
+            num = min(10, len(first_word) - 1)
 
             self._logging.write_log(nick, 'AltTab:{}'.format(num))
 
-            for dummy in range(min(num, 10)):
+            for dummy in range(num):
                 self._send_key('TAB')
 
             self._send_key('ALT', down=False, up=True)
