@@ -271,7 +271,7 @@ class VMThread(threading.Thread):
             self._logging.write_log(nick, 'Reset')
             self._reset_machine()
 
-        if first_word not in INPUT_KEYS:
+        if first_word not in INPUT_KEYS or self._input_counter % 5 == 0:
             word = random.choice(words)[:32]
             try:
                 word.encode('ascii')
