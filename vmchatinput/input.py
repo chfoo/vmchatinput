@@ -5,13 +5,24 @@ import datetime
 import logging
 import os
 import random
+import string
 import time
 import sys
+import collections
 
 from virtualbox.library_ext.keyboard import SCANCODES
 
 _logger = logging.getLogger(__name__)
 
+
+LEFT_BUTTON = 0x01
+RIGHT_BUTTON = 0x02
+MIDDLE_BUTTON = 0x04
+KEYS = tuple(
+    list(string.printable) +
+    list(['F{}'.format(num) for num in range(1, 13)])
+)
+KEY_MODIFIERS = ('SHIFT', 'CTRL', 'ALT')
 INPUT_KEYS = {
     'up': 'E_UP',
     'down': 'E_DOWN',
@@ -21,27 +32,37 @@ INPUT_KEYS = {
     'b': 'BKSP',
     'select': 'TAB',
     'start': 'LWIN',
-    '!balance': 'E_DEL',
-    '!match': 'E_INS',
-    '!tokens': 'ESC',
-    '!song': 'ESC',
-    '!slots': 'CAPS',
 }
 EXTRA_INPUT_KEYWORDS = {
+    '!balance': 'E_DEL',
+    '!song': 'ESC',
+    '!tokens': 'ENTER',
+    '!match': 'LWIN',
+    '!slots': 'CAPS',
+
     'balance': 'E_DEL',
-    'biblethump': 'E_DEL',
-    'pokemon': 'E_DEL',
-    'match': 'E_INS',
-    'tokens': 'ESC',
-    'deilluminati': 'ESC',
-    'music': 'ESC',
+    'song': 'ESC',
+    'tokens': 'ENTER',
+    'match': 'LWIN',
     'slots': 'CAPS',
+
+    'biblethump': 'E_DEL',
+    'deilluminati': 'ESC',
+    'pokemon': 'ENTER',
+    'music': 'LWIN',
     'kapow': 'CAPS',
+
     'entei': ['f', 'ALT'],
     'chatot': ['s', 'CTRL'],
     'blaziken': ['F4', 'ALT'],
+
+    '***': 'E_DEL',
+    'wow': 'ESC',
+    'naughty': 'ENTER',
+    'why': 'LWIN',
+    'streamer': 'CAPS',
 }
-KAPOW_KEYS = [
+KAPOW_WORDS = frozenset([
     '!kapow',
     '!fissure',
     '!sheercold', '!sheer',
@@ -49,26 +70,15 @@ KAPOW_KEYS = [
     '!horndrill', '!horn',
     '!explosion',
     '!selfdestruct', '!self',
-]
-LEFT_BUTTON = 0x01
-RIGHT_BUTTON = 0x02
-MIDDLE_BUTTON = 0x04
-
-MAX_MOUSE_MOVE_AMOUNT = 64
-
-LEFT_CLICK_WORDS = frozenset([
-    'a', 'an', 'the', 'this', 'and', 'i',
 ])
-RIGHT_CLICK_WORDS = frozenset([
-    '***', 'wow', 'streamer', 'naughty',
-])
-CURSOR_MOVE_WORDS = frozenset([
-    'kappa', 'trihard', 'wutface', 'onehand', 'dansgame', 'failfish',
-    'brokeback', 'residentsleeper',
-])
-RESET_WORDS = frozenset([
+RULE_BREAK_WORDS = frozenset([
     '/me', 'non-whitelisted', 'excessive',
 ])
+EMOTE_WORDS = frozenset([
+    'kappa', 'trihard', 'wutface', 'onehand', 'dansgame', 'failfish',
+    'brokeback', 'residentsleeper', 'biblethump', 'deilluminati',
+])
+MAX_MOUSE_MOVE_AMOUNT = 64
 
 
 class InputLogger(object):
@@ -117,12 +127,23 @@ class InputLogger(object):
         self._log_writer = csv.writer(self._log_file)
 
 
+ChatData = collections.namedtuple(
+    '_ChatData',
+    [
+        'nick', 'message', 'words', 'lowered_words', 'lowered_words_set',
+        'first_word'
+    ]
+)
+
+
 class ChatInput(object):
     def __init__(self, log_dir):
         self._logging = InputLogger(log_dir)
         self._input_counter = 0
         self._vbox_console = None
         self._prev_button_flags = 0
+        self._random = random.Random()
+        self._is_key_input_state = True
 
     @property
     def input_counter(self):
@@ -143,110 +164,37 @@ class ChatInput(object):
         if not words:
             return
 
+        if lowered_words_set & EMOTE_WORDS:
+            self._is_key_input_state = not self._is_key_input_state
+
         first_word = lowered_words[0]
 
         if first_word == '!move' and len(words) >= 2:
             first_word = '!' + words[1]
 
-        if first_word in INPUT_KEYS:
-            key = INPUT_KEYS[first_word]
-            self._logging.write_log(nick, key)
-            self._send_key(key)
+        chat_data = ChatData(nick, message, words, lowered_words,
+                             lowered_words_set, first_word)
 
-        elif frozenset(EXTRA_INPUT_KEYWORDS.keys()) & lowered_words_set:
-            matches = frozenset(EXTRA_INPUT_KEYWORDS.keys()) \
-                      & frozenset(lowered_words)
-            matches = list(matches)
-            matches.sort()
-            key = EXTRA_INPUT_KEYWORDS[matches[0]]
+        seed = str(len(nick)) + message
+        self._random.seed(seed)
 
-            if isinstance(key, list):
-                key, modifier = key
-
-                self._logging.write_log(nick, '{}+{}'.format(key, modifier))
-                self._send_key(modifier, down=True, up=False)
-                self._send_key(key)
-                self._send_key(modifier, down=False, up=True)
-            else:
-                self._logging.write_log(nick, key)
-                self._send_key(key)
-
-        elif first_word in KAPOW_KEYS:
+        if first_word in KAPOW_WORDS:
             self._logging.write_log(nick, 'CAD')
             self._send_cad()
 
-        elif first_word.startswith('@'):
-            self._send_key('ALT', down=True, up=False)
-
-            num = min(10, len(first_word) - 1)
-
-            self._logging.write_log(nick, 'AltTab:{}'.format(num))
-
-            for dummy in range(num):
-                self._send_key('TAB')
-
-            self._send_key('ALT', down=False, up=True)
-
-        elif first_word == '!a' or LEFT_CLICK_WORDS & lowered_words_set:
-            self._logging.write_log(nick, 'LClick')
-            self._send_click(LEFT_BUTTON)
-
-        elif first_word == '!b' or RIGHT_CLICK_WORDS & lowered_words_set:
-            self._logging.write_log(nick, 'RClick')
-            self._send_click(RIGHT_BUTTON)
-
-        elif first_word == '!c':
-            self._logging.write_log(nick, 'LMBDown')
-            self._send_mouse_down(LEFT_BUTTON)
-
-        elif first_word == '!d':
-            self._logging.write_log(nick, 'MBUp')
-            self._send_mouse_up()
-
-        elif first_word in '!-' or CURSOR_MOVE_WORDS & lowered_words_set:
-            delta = random_value(len(nick)) % (MAX_MOUSE_MOVE_AMOUNT * 2) \
-                    - MAX_MOUSE_MOVE_AMOUNT
-
-            if delta == 0 or (
-                                len(nick) % 4 == 0 and
-                            abs(delta) < MAX_MOUSE_MOVE_AMOUNT / 3):
-                self._logging.write_log(nick, 'CenterXY')
-                self._center_mouse()
-            elif len(nick) % 2 == 0:
-                self._logging.write_log(nick, 'XD:{}'.format(delta))
-                self._move_mouse(delta, 0)
-            else:
-                self._logging.write_log(nick, 'YD:{}'.format(delta))
-                self._move_mouse(0, delta)
-
-        elif first_word == '!bet':
-            if len(words) < 3:
-                return
-
-            try:
-                bet_amount = int(words[1])
-            except ValueError:
-                return
-
-            bet_team = words[2]
-
-            delta = random_value(bet_amount * len(nick)) % \
-                    (MAX_MOUSE_MOVE_AMOUNT * 2) - MAX_MOUSE_MOVE_AMOUNT
-
-            if bet_team == 'blue':
-                self._logging.write_log(nick, 'XD:{}'.format(delta))
-                self._move_mouse(delta, 0)
-            elif bet_team == 'red':
-                self._logging.write_log(nick, 'YD:{}'.format(delta))
-                self._move_mouse(0, delta)
-
-        elif RESET_WORDS & lowered_words_set and \
-                                self._input_counter % len(RESET_WORDS) == 0:
+        elif RULE_BREAK_WORDS & lowered_words_set and \
+                self._input_counter % len(RULE_BREAK_WORDS) == 0:
             self._logging.write_log(nick, 'Reset')
             self._reset_machine()
 
-        if first_word not in INPUT_KEYS or self._input_counter % 5 == 0:
-            word = random.choice(words)[:32]
+        elif self._is_key_input_state:
+            self._process_as_key_input(chat_data)
+
+        else:
+            self._process_as_mouse_input(chat_data)
+
+        if self._input_counter % 3 == 0:
+            word = self._random.choice(words)[:32]
             try:
                 word.encode('ascii')
             except UnicodeError:
@@ -257,6 +205,140 @@ class ChatInput(object):
                 self._send_keys(' ')
 
         self._input_counter += 1
+
+    def _process_as_key_input(self, chat_data):
+        key = None
+        modifier = None
+
+        if chat_data.first_word in INPUT_KEYS:
+            key = INPUT_KEYS[chat_data.first_word]
+
+        elif chat_data.first_word.startswith('@'):
+            self._send_key('ALT', down=True, up=False)
+
+            num = min(10, len(chat_data.first_word) - 1)
+
+            self._logging.write_log(chat_data.nick, 'AltTab:{}'.format(num))
+
+            for dummy in range(num):
+                self._send_key('TAB')
+
+            self._send_key('ALT', down=False, up=True)
+
+        elif frozenset(EXTRA_INPUT_KEYWORDS.keys()) & \
+                chat_data.lowered_words_set:
+            matches = frozenset(EXTRA_INPUT_KEYWORDS.keys()) \
+                & frozenset(chat_data.lowered_words)
+            matches = list(matches)
+            matches.sort()
+
+            key = EXTRA_INPUT_KEYWORDS[matches[0]]
+
+            if isinstance(key, list):
+                key, modifier = key
+
+        elif self._random.random() < 0.2:
+            if self._random.random() < 0.2:
+                key = self._random.choice(KEYS)
+                modifier = self._random.choice(KEY_MODIFIERS)
+            else:
+                key = self._random.choice(tuple(INPUT_KEYS.values()))
+
+        if key and modifier:
+            self._logging.write_log(
+                chat_data.nick, '{}+{}'.format(key, modifier))
+
+            self._send_key(modifier, down=True, up=False)
+            self._send_key(key)
+            self._send_key(modifier, down=False, up=True)
+        elif key:
+            self._logging.write_log(chat_data.nick, key)
+            self._send_key(key)
+
+    def _process_as_mouse_input(self, chat_data):
+        first_word = chat_data.first_word
+        delta = self._random.uniform(10, MAX_MOUSE_MOVE_AMOUNT)
+        delta_x = 0
+        delta_y = 0
+        left_click = False
+        right_click = False
+        drag = False
+        drag_off = False
+        center = False
+
+        if first_word == 'up':
+            delta_y = -delta
+        elif first_word == 'down':
+            delta_y = delta
+        elif first_word == 'left':
+            delta_x = -delta
+        elif first_word == 'right':
+            delta_x = delta
+        elif first_word in ('a', '!a'):
+            left_click = True
+        elif first_word in ('b', '!b'):
+            right_click = True
+        elif first_word in ('start', '!c'):
+            drag = True
+        elif first_word in ('select', '!d'):
+            drag_off = True
+        elif first_word == '!bet':
+            try:
+                bet_amount = int(chat_data.words[1])
+            except ValueError:
+                return
+
+            bet_team = chat_data.words[2]
+            delta = random_value(bet_amount * len(chat_data.nick)) % \
+                (MAX_MOUSE_MOVE_AMOUNT * 2) - MAX_MOUSE_MOVE_AMOUNT
+
+            if bet_team == 'blue':
+                delta_x = delta
+            elif bet_team == 'red':
+                delta_y = delta
+
+        elif self._random.random() < 0.2:
+            center = True
+
+        else:
+            rand_val = self._random.randint(0, 3)
+
+            if rand_val == 0:
+                delta_y = -delta
+            elif rand_val == 1:
+                delta_y = delta
+            elif rand_val == 2:
+                delta_x = -delta
+            else:
+                delta_x = delta
+
+        if delta_x != 0:
+            self._logging.write_log(chat_data.nick, 'XD:{}'.format(delta_x))
+            self._move_mouse(delta_x, 0)
+
+        if delta_y != 0:
+            self._logging.write_log(chat_data.nick, 'YD:{}'.format(delta_y))
+            self._move_mouse(0, delta_y)
+
+        if left_click:
+            self._logging.write_log(chat_data.nick, 'LClick')
+            self._send_click(LEFT_BUTTON)
+
+        elif right_click:
+            self._logging.write_log(chat_data.nick, 'RClick')
+            self._send_click(RIGHT_BUTTON)
+
+        elif drag:
+            self._logging.write_log(chat_data.nick, 'LMBDown')
+            self._send_mouse_down(LEFT_BUTTON)
+
+        elif drag_off:
+            self._logging.write_log(chat_data.nick, 'MBUp')
+            self._send_mouse_up()
+
+        elif center:
+            self._logging.write_log(chat_data.nick, 'CenterXY')
+            self._center_mouse()
 
     def _send_keys(self, keys_string):
         for key_string in keys_string:
