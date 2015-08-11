@@ -175,9 +175,6 @@ class ChatInput(object):
         chat_data = ChatData(nick, message, words, lowered_words,
                              lowered_words_set, first_word)
 
-        seed = str(len(nick)) + message
-        self._random.seed(seed)
-
         if first_word in KAPOW_WORDS:
             self._logging.write_log(nick, 'CAD')
             self._send_cad()
