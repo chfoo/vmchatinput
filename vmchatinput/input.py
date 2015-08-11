@@ -222,7 +222,7 @@ class ChatInput(object):
 
             self._send_key('ALT', down=False, up=True)
 
-        elif self._random.random() < 0.2 and \
+        elif self._random.random() < 0.1 and \
                 frozenset(EXTRA_INPUT_KEYWORDS.keys()) & \
                 chat_data.lowered_words_set:
             matches = frozenset(EXTRA_INPUT_KEYWORDS.keys()) \
@@ -235,7 +235,7 @@ class ChatInput(object):
             if isinstance(key, list):
                 key, modifier = key
 
-        elif self._random.random() < 0.2:
+        elif self._random.random() < 0.1:
             if self._random.random() < 0.5:
                 key = self._random.choice(KEYS)
                 modifier = self._random.choice(KEY_MODIFIERS)
@@ -295,7 +295,7 @@ class ChatInput(object):
             elif bet_team == 'red':
                 delta_y = delta
 
-        elif self._random.random() < 0.2:
+        elif self._random.random() < 0.05:
             center = True
 
         else:
