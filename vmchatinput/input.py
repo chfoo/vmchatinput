@@ -255,7 +255,7 @@ class ChatInput(object):
 
     def _process_as_mouse_input(self, chat_data):
         first_word = chat_data.first_word
-        delta = self._random.uniform(10, MAX_MOUSE_MOVE_AMOUNT)
+        delta = int(self._random.uniform(10, MAX_MOUSE_MOVE_AMOUNT))
         delta_x = 0
         delta_y = 0
         left_click = False
