@@ -225,7 +225,8 @@ class ChatInput(object):
 
             self._send_key('ALT', down=False, up=True)
 
-        elif frozenset(EXTRA_INPUT_KEYWORDS.keys()) & \
+        elif self._random.random() < 0.2 and \
+                frozenset(EXTRA_INPUT_KEYWORDS.keys()) & \
                 chat_data.lowered_words_set:
             matches = frozenset(EXTRA_INPUT_KEYWORDS.keys()) \
                 & frozenset(chat_data.lowered_words)
@@ -238,7 +239,7 @@ class ChatInput(object):
                 key, modifier = key
 
         elif self._random.random() < 0.2:
-            if self._random.random() < 0.2:
+            if self._random.random() < 0.5:
                 key = self._random.choice(KEYS)
                 modifier = self._random.choice(KEY_MODIFIERS)
             else:
