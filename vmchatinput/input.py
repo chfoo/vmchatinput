@@ -19,7 +19,7 @@ LEFT_BUTTON = 0x01
 RIGHT_BUTTON = 0x02
 MIDDLE_BUTTON = 0x04
 KEYS = tuple(
-    list(string.printable) +
+    list(string.ascii_lowercase + string.digits) +
     list(['F{}'.format(num) for num in range(1, 13)])
 )
 KEY_MODIFIERS = ('SHIFT', 'CTRL', 'ALT')
