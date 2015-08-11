@@ -144,20 +144,22 @@ class VMThread(threading.Thread):
             progress = self._vbox_machine.launch_vm_process(self._vbox_session)
             progress.wait_for_completion()
             return False
-        elif self._vbox_machine.state == MachineState.stuck:
-            _logger.warning('Machine is stuck.')
-            self._vbox_session.console.power_down()
-            time.sleep(5)
-        elif self._vbox_machine.state != MachineState.running:
-            _logger.info('Waiting for machine. Current: %s',
-                          self._vbox_machine.state)
-            time.sleep(5)
-            return False
         else:
             if not self._vbox_session:
                 self._vbox_session = self._vbox_machine.create_session()
 
-            return True
+            if self._vbox_machine.state == MachineState.stuck:
+                _logger.warning('Machine is stuck.')
+                self._vbox_session.console.power_down()
+                time.sleep(5)
+                return False
+            elif self._vbox_machine.state != MachineState.running:
+                _logger.info('Waiting for machine. Current: %s',
+                              self._vbox_machine.state)
+                time.sleep(5)
+                return False
+            else:
+                return True
 
     def _process_input(self, nick, message):
         nick = nick.lower()
