@@ -144,6 +144,7 @@ class ChatInput(object):
         self._prev_button_flags = 0
         self._random = random.Random()
         self._is_key_input_state = True
+        self._is_word_input_state = False
 
     @property
     def input_counter(self):
@@ -164,8 +165,11 @@ class ChatInput(object):
         if not words:
             return
 
-        if lowered_words_set & EMOTE_WORDS:
+        if lowered_words_set & EMOTE_WORDS and self._input_counter % 2 == 0:
             self._is_key_input_state = not self._is_key_input_state
+
+        if lowered_words_set & EMOTE_WORDS and self._input_counter % 3 == 0:
+            self._is_word_input_state = not self._is_word_input_state
 
         first_word = lowered_words[0]
 
@@ -190,7 +194,7 @@ class ChatInput(object):
         else:
             self._process_as_mouse_input(chat_data)
 
-        if self._input_counter % 3 == 0:
+        if self._is_word_input_state:
             word = self._random.choice(words)[:32]
             try:
                 word.encode('ascii')
