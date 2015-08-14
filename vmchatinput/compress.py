@@ -39,7 +39,7 @@ class CompressThread(threading.Thread):
     def _compress_log_files(self):
         pattern = self._log_dir + '/log.*-*-*[0-9]'
 
-        for filename in glob.glob(pattern):
+        for filename in glob.iglob(pattern):
             self._compress_xz(filename)
 
     def _compress_input_log_files(self):
@@ -54,7 +54,7 @@ class CompressThread(threading.Thread):
     def _compress_images(self):
         pattern = self._log_dir + '/[0-9]*-*-*[0-9]/[0-9]*[0-9].png'
 
-        for filename in glob.glob(pattern):
+        for filename in glob.iglob(pattern):
             if self._is_file_recent(filename):
                 continue
 
