@@ -10,6 +10,10 @@ import time
 
 _logger = logging.getLogger(__name__)
 
+LOG_GLOB = '/log.*-*-*[0-9]'
+INPUT_LOG_GLOB = '/[0-9]*-*-*[0-9].csv'
+IMAGES_GLOB = '/[0-9]*-*-*[0-9]/[0-9]*T*[0-9].png'
+
 
 class CompressThread(threading.Thread):
     def __init__(self, log_dir):
@@ -37,13 +41,13 @@ class CompressThread(threading.Thread):
         self._compress_images()
 
     def _compress_log_files(self):
-        pattern = self._log_dir + '/log.*-*-*[0-9]'
+        pattern = self._log_dir + LOG_GLOB
 
         for filename in glob.iglob(pattern):
             self._compress_xz(filename)
 
     def _compress_input_log_files(self):
-        pattern = self._log_dir + '/[0-9]*-*-*[0-9].csv'
+        pattern = self._log_dir + INPUT_LOG_GLOB
 
         for filename in glob.glob(pattern):
             if self._is_file_recent(filename):
@@ -52,7 +56,7 @@ class CompressThread(threading.Thread):
             self._compress_xz(filename)
 
     def _compress_images(self):
-        pattern = self._log_dir + '/[0-9]*-*-*[0-9]/[0-9]*[0-9].png'
+        pattern = self._log_dir + IMAGES_GLOB
 
         for filename in glob.iglob(pattern):
             if self._is_file_recent(filename):
