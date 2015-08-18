@@ -284,7 +284,7 @@ class ChatInput(object):
             drag = True
         elif first_word in ('select', '!d'):
             drag_off = True
-        elif first_word == '!bet':
+        elif first_word == '!bet' and len(chat_data.words) >= 3:
             try:
                 bet_amount = int(chat_data.words[1])
             except ValueError:
