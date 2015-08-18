@@ -32,6 +32,8 @@ class Client(irc.client.SimpleIRCClient):
 
         self._running = False
 
+        self.connection.set_keepalive(300)
+
     def connect(self, *args, **kwargs):
         _logger.info('Connecting to server %s', args)
         self._running = True
