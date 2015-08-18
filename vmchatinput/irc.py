@@ -29,15 +29,16 @@ class Client(irc.client.SimpleIRCClient):
         self._message_queue = message_queue
         self.connection.buffer_class.errors = 'replace'
         self._reconnect_time = MIN_RECONNECT_TIME
-        self._connect_args = None
+
+        self._running = False
 
     def connect(self, *args, **kwargs):
         _logger.info('Connecting to server %s', args)
-        self._connect_args = (args, kwargs)
+        self._running = True
         irc.client.SimpleIRCClient.connect(self, *args, **kwargs)
 
     def stop_autoconnect(self):
-        self._connect_args = None
+        self._running = False
 
     def on_welcome(self, connection, event):
         self._reconnect_time = MIN_RECONNECT_TIME
@@ -47,19 +48,19 @@ class Client(irc.client.SimpleIRCClient):
     def on_disconnect(self, connection, event):
         _logger.info('Disconnected!')
 
-        if self._connect_args:
+        if self._running:
             _logger.info('Reconnecting in %d seconds...', self._reconnect_time)
             self.connection.execute_delayed(self._reconnect_time,
                                             self._reconnect)
 
     def _reconnect(self):
-        if self.connection.is_connected() or not self._connect_args:
+        if self.connection.is_connected() or not self._running:
             return
 
         _logger.info('Reconnecting...')
 
         try:
-            self.connect(*self._connect_args[0], **self._connect_args[1])
+            self.connection.reconnect()
         except irc.client.ServerConnectionError:
             _logger.exception('Failed to reconnect.')
             self._reconnect_time *= 2
