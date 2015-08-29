@@ -47,6 +47,7 @@ if __name__ == '__main__':
 
     while True:
         print('Running...')
+        start_time = time.time()
         proc = subprocess.Popen(
             [sys.executable, '-m', 'vmchatinput'] + sys.argv[1:]
         )
@@ -55,6 +56,11 @@ if __name__ == '__main__':
 
         if proc.returncode == 0:
             break
+
+        end_time = time.time()
+
+        if end_time - start_time > 60 * 10:
+            sleep_time = MIN_SLEEP_TIME
 
         print('Sleeping...', sleep_time)
         time.sleep(sleep_time)
