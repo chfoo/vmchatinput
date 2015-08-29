@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import logging
+import re
+import subprocess
 import threading
 
 from six.moves import queue
@@ -18,11 +20,13 @@ _logger = logging.getLogger(__name__)
 
 
 class VMThread(threading.Thread):
-    def __init__(self, message_queue, machine_name, log_dir):
+    def __init__(self, message_queue, machine_name, log_dir,
+                 minimized_gui=False):
         threading.Thread.__init__(self)
         self._message_queue = message_queue
         self._machine_name = machine_name
         self._log_dir = log_dir
+        self._minimized_gui = minimized_gui
         self._running = False
         self.daemon = True
         self._vbox = None
@@ -77,6 +81,10 @@ class VMThread(threading.Thread):
             self._vbox_session = virtualbox.Session()
             progress = self._vbox_machine.launch_vm_process(self._vbox_session)
             progress.wait_for_completion()
+
+            if self._minimized_gui:
+                self._minimize_vm_window()
+
             return False
         else:
             if not self._vbox_session:
@@ -125,6 +133,27 @@ class VMThread(threading.Thread):
     def _reset_machine(self):
         _logger.debug('Reset machine')
         self._vbox_session.console.reset()
+
+    def _minimize_vm_window(self):
+        try:
+            proc = subprocess.Popen(['wmctrl', '-l'], stdout=subprocess.PIPE)
+        except OSError:
+            return
+
+        stdout_data = proc.communicate()[0].decode('utf-8', 'replace')
+
+        match = re.search(
+            r'^0x([a-f0-9]+) +\w+ +\S+ +{} +.* - Oracle VM VirtualBox$'
+            .format(re.escape(self._machine_name)),
+            stdout_data,
+            re.MULTILINE
+        )
+
+        if match:
+            proc = subprocess.Popen([
+                'xdotool', 'windowminimize', '0x{}'.format(match.group(1)),
+            ])
+            proc.communicate()
 
 
 class FrozenChecker(object):

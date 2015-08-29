@@ -50,7 +50,7 @@ def main():
 
     irc_thread = IRCThread(message_queue, config['channel'], config['server'])
     vm_thread = VMThread(message_queue, config['virtual_machine'],
-                         config['log_dir'])
+                         config['log_dir'], config.get('minimized_gui'))
     compress_thread = CompressThread(config['log_dir'])
 
     threads = [irc_thread, vm_thread, compress_thread]

@@ -21,6 +21,11 @@ Python packages:
 * irc (12.3)
 * pillow (2.7)
 
+Optional for minimizing the VM window:
+
+* xdotool
+* vmctrl
+
 1. Install VirtualBox from their website.
 2. Install stable packages: `sudo apt-get install python-pil pngcrush xz-utils`
 3. Install latest Python packages: `pip2 install irc pyvbox --user`
