@@ -3,13 +3,12 @@ import logging
 import atexit
 from logging.handlers import TimedRotatingFileHandler
 import os
-
-from six.moves import queue
 import argparse
 import signal
 import sys
-from vmchatinput.compress import CompressThread
 
+from six.moves import queue
+from vmchatinput.compress import CompressThread
 from vmchatinput.irc import IRCThread
 from vmchatinput.vm import VMThread
 
@@ -20,6 +19,8 @@ def main():
     message_queue = queue.Queue(10)
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('config_file')
+    arg_parser.add_argument('--component', choices=['vm', 'gallery'],
+                            default='vm')
     args = arg_parser.parse_args()
 
     with open(args.config_file) as file:
@@ -33,8 +34,18 @@ def main():
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter('%(levelname)s %(message)s'))
 
+    if args.component == 'vm':
+        log_name = 'log'
+    elif args.component == 'gallery':
+        # Avoid importing modules not availabe in Python 2
+        from vmchatinput.gallery.main import GalleryThread
+
+        log_name = 'log_gallery'
+    else:
+        raise Exception()
+
     log_handler = TimedRotatingFileHandler(
-        os.path.join(config['log_dir'], 'log'),
+        os.path.join(config['log_dir'], log_name),
         utc=True, when='midnight',
     )
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -48,12 +59,21 @@ def main():
     root_logger.addHandler(console_handler)
     root_logger.addHandler(log_handler)
 
-    irc_thread = IRCThread(message_queue, config['channel'], config['server'])
-    vm_thread = VMThread(message_queue, config['virtual_machine'],
-                         config['log_dir'], config.get('minimized_gui'))
-    compress_thread = CompressThread(config['log_dir'])
+    if args.component == 'vm':
+        irc_thread = IRCThread(message_queue, config['channel'], config['server'])
+        vm_thread = VMThread(message_queue, config['virtual_machine'],
+                             config['log_dir'])
+        compress_thread = CompressThread(config['log_dir'])
 
-    threads = [irc_thread, vm_thread, compress_thread]
+        threads = [irc_thread, vm_thread, compress_thread]
+
+    elif args.component == 'gallery':
+        gallery_thread = GalleryThread(config['log_dir'],
+                                       config['gallery_output_dir'])
+        threads = [gallery_thread]
+    else:
+        raise Exception()
+
     non_local_dict = {'running': True}
 
     for thread in threads:

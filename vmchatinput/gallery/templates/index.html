@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<ul>
+{% for list_item in index_list_items %}
+<li>
+    {{ list_item.date_obj.isoformat() }} ({{ list_item.num_images }})
+</li>
+{% endfor %}
+</ul>
+
+{% endblock %}

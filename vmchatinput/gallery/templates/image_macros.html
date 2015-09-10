@@ -1,0 +1,14 @@
+{% macro thumbnail(image_url, image_date) %}
+<div class="thumbnail-container">
+    <img class="thumbnail-image" src="{{ image_url }}">
+    <span class="thumbnail-date">{{ image_date }}</span>
+</div>
+{% endmacro %}
+
+{% macro large(image_url, image_date, description) %}
+<div class="image-container">
+    <img class="image-image" src="{{ image_url }}">
+    <span class="image-date">{{ image_date }}</span>
+    <p class="image-description">{{ description }}</p>
+</div>
+{% endmacro %}

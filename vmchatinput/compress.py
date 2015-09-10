@@ -13,6 +13,7 @@ _logger = logging.getLogger(__name__)
 LOG_GLOB = '/log.*-*-*[0-9]'
 INPUT_LOG_GLOB = '/[0-9]*-*-*[0-9].csv'
 IMAGES_GLOB = '/[0-9]*-*-*[0-9]/[0-9]*T*[0-9].png'
+IMAGES_COMPRESSED_GLOB = '/[0-9]*-*-*[0-9]/[0-9]*T*[0-9].c.png'
 
 
 class CompressThread(threading.Thread):
