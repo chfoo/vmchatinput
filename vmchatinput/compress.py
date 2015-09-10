@@ -39,6 +39,7 @@ class CompressThread(threading.Thread):
         self._compress_log_files()
         self._compress_input_log_files()
         self._compress_images()
+        self._deduplicate_images()
 
     def _compress_log_files(self):
         pattern = self._log_dir + LOG_GLOB
@@ -105,3 +106,38 @@ class CompressThread(threading.Thread):
         assert os.path.exists(new_filename)
         assert os.path.getsize(new_filename) > 0
         os.remove(filename)
+
+    def _deduplicate_images(self):
+        date_today = datetime.datetime.utcnow().date()
+
+        for dir_name in os.listdir(self._log_dir):
+            _logger.debug('dedup list dir %s', dir_name)
+            if not re.match('\d{4}-\d{2}-\d{2}', dir_name):
+                continue
+
+            try:
+                dir_date = datetime.datetime.strptime(dir_name, '%Y-%m-%d').date()
+            except ValueError:
+                continue
+
+            if dir_date >= date_today:
+                continue
+
+            dir_path = os.path.join(self._log_dir, dir_name)
+            if not os.path.isdir(dir_path):
+                continue
+
+            try:
+                proc = subprocess.Popen(['rdfind', '-makehardlinks', 'true',
+                                         '-makeresultsfile', 'false',
+                                         dir_path])
+            except OSError:
+                _logger.debug('rdfind not available')
+                break
+
+            _logger.info('Running rdfind on %s', dir_path)
+            proc.communicate()
+
+            if proc.returncode != 0:
+                raise Exception('rdfind exited abnormally: {}'
+                                .format(proc.returncode))
