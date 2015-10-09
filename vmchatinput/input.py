@@ -25,13 +25,21 @@ KEYS = tuple(
 KEY_MODIFIERS = ('SHIFT', 'CTRL', 'ALT')
 INPUT_KEYS = {
     'up': 'E_UP',
+    'cup': 'E_UP',
     'down': 'E_DOWN',
+    'cdown': 'E_DOWN',
     'left': 'E_LEFT',
+    'cleft': 'E_LEFT',
     'right': 'E_RIGHT',
+    'cright': 'E_RIGHT',
     'a': 'ENTER',
+    'l': 'ENTER',
     'b': 'BKSP',
+    'r': 'BKSP',
     'select': 'TAB',
+    'y': 'TAB',
     'start': 'LWIN',
+    'x': 'LWIN',
 }
 EXTRA_INPUT_KEYWORDS = {
     '!balance': 'E_DEL',
@@ -211,9 +219,10 @@ class ChatInput(object):
     def _process_as_key_input(self, chat_data):
         key = None
         modifier = None
+        first_input_combo = chat_data.first_word.split('+')[0]
 
-        if chat_data.first_word in INPUT_KEYS:
-            key = INPUT_KEYS[chat_data.first_word]
+        if first_input_combo in INPUT_KEYS:
+            key = INPUT_KEYS[first_input_combo]
 
         elif chat_data.first_word.startswith('@'):
             self._send_key('ALT', down=True, up=False)
