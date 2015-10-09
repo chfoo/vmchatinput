@@ -65,12 +65,13 @@ EXTRA_INPUT_KEYWORDS = {
 KAPOW_WORDS = frozenset([
     '!kapow',
     '!fissure',
-    '!sheercold', '!sheer',
+    '!sheercold',
     '!guillotine',
-    '!horndrill', '!horn',
+    '!horndrill',
     '!explosion',
-    '!selfdestruct', '!self',
+    '!selfdestruct',
 ])
+KAPOW_WORDS_TRUNCATED = frozenset([word[:7] for word in KAPOW_WORDS])
 RULE_BREAK_WORDS = frozenset([
     '/me', 'non-whitelisted', 'excessive',
 ])
@@ -179,7 +180,7 @@ class ChatInput(object):
         chat_data = ChatData(nick, message, words, lowered_words,
                              lowered_words_set, first_word)
 
-        if first_word in KAPOW_WORDS:
+        if message.lower().replace(' ', '')[:7] in KAPOW_WORDS_TRUNCATED:
             self._logging.write_log(nick, 'CAD')
             self._send_cad()
 
