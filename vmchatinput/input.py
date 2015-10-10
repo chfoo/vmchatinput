@@ -188,7 +188,8 @@ class ChatInput(object):
         chat_data = ChatData(nick, message, words, lowered_words,
                              lowered_words_set, first_word)
 
-        if message.lower().replace(' ', '')[:7] in KAPOW_WORDS_TRUNCATED:
+        if message.lower().replace(' ', '')[:7] in KAPOW_WORDS_TRUNCATED or \
+                first_word.startswith('!kapow'):
             self._logging.write_log(nick, 'CAD')
             self._send_cad()
 
