@@ -37,6 +37,7 @@ INPUT_KEYS = {
     'b': 'BKSP',
     'r': 'BKSP',
     'select': 'TAB',
+    'z': 'TAB',
     'y': 'TAB',
     'start': 'LWIN',
     'x': 'LWIN',
